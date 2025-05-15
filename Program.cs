@@ -1,168 +1,237 @@
-﻿//Create a deck
-object[] Deck = new object[]
-{
-    2, 3, 4, 5, 6 , 7, 8, 9, 10, 'J', 'Q', 'K', 'A'
-};
+using static System.Console;
 
 Random rnd = new Random();
+object[] deck = new object[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 'J', 'Q', 'K', 'A' };
+bool currentHand = true;
+int cash = 500;
+int bet;
+int decision = 0; //1-hit | 2-stand | 3-double | 4-split
 
-int Draw() //Method to pick random number as 'card'
+const string title = "B L A C K J A C K";
+
+string playerName = "Player";
+string dealerName = "Dealer";
+List<object> playerHand = new List<object>();
+List<object> dealerHand = new List<object>();
+
+void Title()
 {
-    int card = rnd.Next(0, Deck.Length);
+    for (int i = 0; i < title.Length; i++)
+    {
+        Write(title[i]);
+        Thread.Sleep(50);
+    }
+    ReadKey();
+}
+
+int Bet()
+{
+    Clear();
+
+    WriteLine($"CASH: {cash:C}");
+
+    int betAmt;
+    Write("Enter bet amount: ");
+    betAmt = Convert.ToInt32(Console.ReadLine());
+    if (betAmt > 0 && betAmt <= cash)
+    {
+        cash -= betAmt;
+    }
+    else if (betAmt > cash)
+    {
+        betAmt = Bet();
+    }
+
+    return betAmt;
+}
+
+int DealCards(List<object> hand)
+{
+    int card;
+    card = rnd.Next(0, deck.Length);
+
+    hand.Add(deck[card]);
     return card;
-};
-
-
-//Deal hand to player. Display both cards
-Console.WriteLine("PLAYER");
-
-object[] playerHand = new object[] //array for player's hand
-{
-    Deck[Draw()], Deck[Draw()]
-};
-
-int[] playerCardCount = new int[playerHand.Length];
-{
-
-};
-
-
-int playerCardVal = 0;
-
-for (int i = 0; i < playerHand.Length; i++)
-{
-    if (Convert.ToInt32(playerHand[i]) > 10 && Convert.ToInt32(playerHand[i]) != 65)
-    {
-        playerCardVal = 10;
-        playerCardCount[i] = playerCardVal;
-    }
-    else if (Convert.ToInt32(playerHand[i]) >= 0 && Convert.ToInt32(playerHand[i]) <= 10)
-    {
-        playerCardVal = Convert.ToInt32(playerHand[i]);
-        playerCardCount[i] = playerCardVal;
-    }
-    else if (Convert.ToInt32(playerHand[i]) == 65)
-    {
-        playerCardVal = 11;
-        playerCardCount[i] = playerCardVal;
-    }
-    Console.Write("CARD: {0} ", playerHand[i]);
-    Console.WriteLine("VALUE: {0}", playerCardCount[i]);
 }
 
-Console.WriteLine(String.Empty);
-
-//Deal hand to dealer. Display first card
-Console.WriteLine("DEALER");
-
-object[] dealerHand = new object[] //array for dealer's hand
+int CalculateScore(List<object> hand)
 {
-    Deck[Draw()], Deck[Draw()]
-};
+    int score = 0;
 
-int[] dealerCardCount = new int[dealerHand.Length];
-{
-
-};
-
-
-int dealerCardVal = 0;
-
-for (int i = 0; i < dealerHand.Length; i++)
-{
-    if (Convert.ToInt32(dealerHand[i]) > 10 && Convert.ToInt32(dealerHand[i]) != 65)
+    foreach (object card in hand)
     {
-        dealerCardVal = 10;
-        dealerCardCount[i] = dealerCardVal;
+        if (card is int)
+        {
+            score += Convert.ToInt32(card);
+        }
+        else if (card is char && card != deck[deck.Length - 1])
+        {
+            score += 10;
+        }
+        else { score += 11; }
     }
-    else if (Convert.ToInt32(dealerHand[i]) >= 0 && Convert.ToInt32(dealerHand[i]) <= 10)
+
+    while (score > 21 && hand.Contains('A'))
     {
-        dealerCardVal = Convert.ToInt32(dealerHand[i]);
-        dealerCardCount[i] = dealerCardVal;
+        score -= 10;
     }
-    else if (Convert.ToInt32(dealerHand[i]) == 65)
-    {
-        dealerCardVal = 11;
-        dealerCardCount[i] = dealerCardVal;
-    }
-    Console.Write("CARD: {0} ", dealerHand[i]);
-    Console.WriteLine("VALUE: {0}", dealerCardCount[i]);
+
+    return score;
 }
 
-Console.WriteLine(String.Empty);
-
-int playerTotal = 0;
-int dealerTotal = 0;
-
-
-//~~~~Calculate totals~~~~
-
-//add card values in player hand
-foreach (var VARIABLE in playerCardCount)
+void Display()
 {
-    playerTotal += VARIABLE;
+    if (playerHand.Count == 2 && decision == 0)//def
+    {
+        Clear();
+
+        WriteLine("\nCASH: {0:C}\n", cash);
+        WriteLine("\nCurrent Bet: {0:C}\n", bet);
+
+        Write($"{playerName}:\t\t");
+        foreach (object card in playerHand)
+        {
+            Write($"{card}\t");
+            Thread.Sleep(100);
+        }
+
+        WriteLine("\n");
+
+        Write($"{dealerName}:\t\t");
+        for (int i = 0; i < dealerHand.Count; i++)
+        {
+            if (i == 0)
+            {
+                Write("[x]\t");
+                Thread.Sleep(100);
+            }
+            else { Write($"{dealerHand[i]} "); }
+            Thread.Sleep(100);
+        }
+
+        WriteLine("\n");
+        WriteLine($"{playerName}: {CalculateScore(playerHand)}");
+    }
+    else if (decision == 2)//stand
+    {
+        Clear();
+
+        WriteLine("\nCASH: {0:C}\n", cash);
+        WriteLine("\nCurrent Bet: {0:C}\n", bet);
+
+        Write($"{playerName}:\t\t");
+        foreach (object card in playerHand)
+        {
+            Write($"{card}\t");
+            Thread.Sleep(100);
+        }
+
+        WriteLine("\n");
+
+        Write($"{dealerName}:\t\t");
+        for (int i = 0; i < dealerHand.Count; i++)
+        {
+            Write($"{dealerHand[i]}\t");
+            Thread.Sleep(100);
+        }
+
+        WriteLine("\n");
+        WriteLine($"{playerName}: {CalculateScore(playerHand)}");
+        WriteLine($"{dealerName}: {CalculateScore(dealerHand)}");
+    }
+    else if (playerHand.Count > 2 && decision == 1 || decision == 3)//hit or double view
+    {
+        Clear();
+
+        WriteLine("\nCASH: {0:C}\n", cash);
+        WriteLine("\nCurrent Bet: {0:C}\n", bet);
+
+        Write($"{playerName}:\t\t");
+        foreach (object card in playerHand)
+        {
+            Write($"{card}\t");
+            Thread.Sleep(100);
+        }
+
+        WriteLine("\n");
+
+        Write($"{dealerName}:\t\t");
+        for (int i = 0; i < dealerHand.Count; i++)
+        {
+            if (i == 0)
+            {
+                Write("[x]\t");
+                Thread.Sleep(100);
+            }
+            else { Write($"{dealerHand[i]} "); Thread.Sleep(100); }
+        }
+
+        WriteLine("\n");
+        WriteLine($"{playerName}: {CalculateScore(playerHand)}");
+    }
 }
 
-if (playerTotal > 21 && playerCardCount.Length == 2)
+void PlayerDecision()
 {
-    playerTotal -= 10;
+    ConsoleKeyInfo key;
+    Write("(H) Hit | (S) Stand: ");
+    key = Console.ReadKey();
+
+    if (key.KeyChar == 'h')
+    {
+        decision = 1;
+        DealCards(playerHand);
+        Display();
+    }
+    else if (key.KeyChar == 's')
+    {
+        decision = 2;
+        Display();
+    }
+    else
+    {
+        decision = 0; Display();
+    }
 }
 
-Console.WriteLine("Player: {0}", playerTotal);
-
-//add card values in dealer hand
-foreach (var VARIABLE in dealerCardCount)
+void DealerAction()
 {
-    dealerTotal += VARIABLE;
+    while(decision == 2 && CalculateScore(dealerHand) < 17)
+        {
+            Thread.Sleep(1000);
+            DealCards(dealerHand);
+            Display();
+        }
+
+    Display();
 }
 
-if (dealerTotal > 21 && dealerCardCount.Length == 2)
+void GameLoop()
 {
-    dealerTotal -= 10;
+    Title();
+
+    bet = Bet();
+
+    DealCards(playerHand);
+    DealCards(playerHand);
+    DealCards(dealerHand);
+    DealCards(dealerHand);
+
+    CalculateScore(playerHand);
+    CalculateScore(dealerHand);
+
+    Display();
+    while(CalculateScore(playerHand) < 21 && decision != 2)
+    {
+        PlayerDecision();
+        if (decision == 1 && CalculateScore(playerHand) < 21)
+        {
+            PlayerDecision();
+        }
+    }
+    DealerAction();
 }
 
-Console.WriteLine("Dealer: {0}", dealerTotal);
+GameLoop();
 
-Console.WriteLine();
-
-//Hit/Stand
-
-
-//Calculate winner
-
-Console.WriteLine(GetWinner());
-
-
-string GetWinner()
-{
-    string winner = String.Empty;
-    if (playerTotal > dealerTotal && playerTotal != 21)
-    {
-        winner = "Player Wins.";
-    }
-    else if (playerTotal == dealerTotal) { winner = "Push."; }
-    else if (playerTotal < dealerTotal && dealerTotal != 21)
-    {
-        winner = "Dealer Wins.";
-    }
-    else if (playerTotal == 21 && playerCardCount.Length == 2)
-    {
-        winner = "PLAYER BLACK JACK.";
-    }
-    else if (dealerTotal == 21 && dealerCardCount.Length == 2)
-    {
-        winner = "DEALER BLACK JACK.";
-    }
-    else if (playerTotal == dealerTotal) { winner = "Push."; }
-
-    if (playerTotal > 21 && dealerTotal < 21)
-    {
-        winner = "Dealer Wins.";
-    }
-    else if (dealerTotal > 21 && playerTotal < 21)
-    {
-        winner = "Player Wins.";
-    }
-
-    return winner;
-};
+ReadKey();
