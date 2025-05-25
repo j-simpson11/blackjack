@@ -8,7 +8,7 @@ bool handComplete = false;
 int cash = 500;
 int bet;
 int decision = 0; //1-hit | 2-stand | 3-double | 4-split
-int winner = 0; //1-Player | 2-Dealer | 3-Push
+int winner = 0; //1-Player | 2-Dealer | 3-Push | 4-player21 | 5-dealer21
 ConsoleKeyInfo contGame;
 
 const string title = "B L A C K J A C K";
@@ -18,7 +18,7 @@ string dealerName = "Dealer";
 List<object> playerHand = new List<object>();
 List<object> dealerHand = new List<object>();
 
-//Title();
+Title();
 
 while (!handComplete)
 {
@@ -42,28 +42,29 @@ int Bet()
     WriteLine($"CASH: {cash:C}");
 
     int betAmt;
-    //string betParse;
 
     Write("Enter bet amount: ");
-    string betSt = ReadLine();
+    string? betSt = ReadLine();
 
-    bool betParse = int.TryParse(betSt, out betAmt);
+    bool betParse = true;
+    betParse = int.TryParse(betSt, out betAmt);
 
-    if (betParse)
+    if (betParse && betAmt <= cash)
     {
+
         if (betAmt > 0 && betAmt <= cash)
         {
             cash -= betAmt;
+            return betAmt;
         }
-        else if (betAmt > cash)
+        else if (betAmt > cash || !betParse || betAmt > cash)
         {
-            betAmt = Bet();
+            betAmt = 0;
+            Bet();
         }
         else { betAmt = Bet(); }
     }
-    else if(!betParse && betAmt <= 0) { Bet(); }
-
-    return betAmt;
+    return betAmt = 0;
 }
 
 int DealCards(List<object> hand)
@@ -75,7 +76,7 @@ int DealCards(List<object> hand)
     return card;
 }
 
-int CalculateScore(List<object> hand)
+int Score(List<object> hand)
 {
     int score = 0;
 
@@ -92,23 +93,23 @@ int CalculateScore(List<object> hand)
         else { score += 11; }
     }
 
-    while (score > 21 && hand.Contains('A'))
+    if (score > 21 && hand.Contains('A'))
     {
-        foreach(object card in hand)
+        for (int i = 0; i < hand.Count; i++)
         {
-            //Convert.ToChar(card) == 'A' ? score -= 10 : score += 0 ;
-            for (int i = 0; i < hand.Count; i++)
+            if (Convert.ToChar(hand[i]) == 'A' /*&& i <= hand.Count*/)
             {
-                if (i == 0)
-                {
-                    score += 0;
-                }
-                else if(Convert.ToChar(card) == 'A' && score > 21)
+                if (Convert.ToChar(hand[i]) == 'A' && score > 21)
                 {
                     score -= 10;
+                    if (score <= 21 && score > 17)
+                    {
+                        return score;
+                    }
                 }
             }
         }
+
     }
 
     return score;
@@ -116,7 +117,8 @@ int CalculateScore(List<object> hand)
 
 void Display()
 {
-    if (playerHand.Count == 2 && decision == 0)//def
+    if ((playerHand.Count == 2 && decision == 0) /*def*/
+        || (playerHand.Count > 2 && decision == 1))//hit
     {
         Clear();
 
@@ -145,7 +147,7 @@ void Display()
         }
 
         WriteLine("\n");
-        WriteLine($"{playerName}: {CalculateScore(playerHand)}");
+        WriteLine($"{playerName}: {Score(playerHand)}\n");
     }
     else if (decision == 2 || decision == 3)//stand or double view
     {
@@ -170,46 +172,22 @@ void Display()
             Thread.Sleep(100);
         }
 
-        WriteLine("\n");
-        WriteLine($"{playerName}: {CalculateScore(playerHand)}");
-        WriteLine($"{dealerName}: {CalculateScore(dealerHand)}");
-    }
-    else if (playerHand.Count > 2 && decision == 1)//hit view
-    {
-        Clear();
+        WriteLine("\n\n----------------------------------------------\n");
+        WriteLine($"{playerName}: {Score(playerHand)}\n");
+        WriteLine($"{dealerName}: {Score(dealerHand)}\n");
 
-        WriteLine("\nCASH: {0:C}\n", cash);
-        WriteLine("\nCurrent Bet: {0:C}\n", bet);
 
-        Write($"{playerName}:\t\t");
-        foreach (object card in playerHand)
-        {
-            Write($"{card}\t");
-            Thread.Sleep(100);
-        }
-
-        WriteLine("\n");
-
-        Write($"{dealerName}:\t\t");
-        for (int i = 0; i < dealerHand.Count; i++)
-        {
-            if (i == 0)
-            {
-                Write("[x]\t");
-                Thread.Sleep(100);
-            }
-            else { Write($"{dealerHand[i]} "); Thread.Sleep(100); }
-        }
-
-        WriteLine("\n");
-        WriteLine($"{playerName}: {CalculateScore(playerHand)}");
     }
 }
 
 void PlayerDecision()
 {
     ConsoleKeyInfo key;
-    Write("(H) Hit | (S) Stand | (D) Double: ");
+    if (cash >= bet * 2)
+    {
+        Write("(H) Hit | (S) Stand | (D) Double");
+    }
+    else { Write("(H) Hit | (S) Stand"); }
     key = Console.ReadKey();
 
     if (key.KeyChar == 'h')
@@ -223,9 +201,9 @@ void PlayerDecision()
         decision = 2;
         Display();
     }
-    else if(key.KeyChar == 'd')
+    else if (key.KeyChar == 'd')
     {
-        if(cash >= bet * 2)
+        if (cash >= bet * 2)
         {
             decision = 3;
             cash -= bet;
@@ -233,43 +211,56 @@ void PlayerDecision()
             DealCards(playerHand);
             Display();
         }
+        else
+        {
+            Display();
+        }
     }
     else
     {
-        decision = 0; //Display();
+        Display();
     }
 }
 
 void DealerAction()
 {
-    while((decision == 2 || decision == 3) && CalculateScore(dealerHand) < 17)
-        {
-            Thread.Sleep(1000);
-            DealCards(dealerHand);
-            Display();
-        }
+    while ((decision == 2 || decision == 3) && Score(dealerHand) < 17 && Score(playerHand) < 21)
+    {
+        Thread.Sleep(1000);
+        DealCards(dealerHand);
+        Display();
+    }
 
     Display();
 }
 
 int WinConditions()
 {
-    while(winner == 0)
+    while (winner == 0)
     {
-        if(CalculateScore(playerHand) <= 21 && CalculateScore(playerHand) > CalculateScore(dealerHand) || 
-            (CalculateScore(playerHand) <= 21 && CalculateScore(dealerHand) > 21))
+        if (Score(playerHand) == 21)
+        {
+            winner = 4;
+            Winner();
+        }
+        else if (Score(dealerHand) == 21)
+        {
+            winner = 5;
+        }
+        else if (Score(playerHand) <= 21 && Score(playerHand) > Score(dealerHand) ||
+            (Score(playerHand) <= 21 && Score(dealerHand) > 21))
         {
             winner = 1;
             Winner();
         }
-        else if((CalculateScore(playerHand) > 21) || 
-            (CalculateScore(dealerHand) <= 21 && CalculateScore(dealerHand) > CalculateScore(playerHand)) || 
-            (CalculateScore(dealerHand) <= 21 && CalculateScore(playerHand) > 21))
+        else if ((Score(playerHand) > 21) ||
+            (Score(dealerHand) <= 21 && Score(dealerHand) > Score(playerHand)) ||
+            (Score(dealerHand) <= 21 && Score(playerHand) > 21))
         {
             winner = 2;
             Winner();
         }
-        else if(CalculateScore(playerHand) == CalculateScore(dealerHand))
+        else if (Score(playerHand) == Score(dealerHand))
         {
             winner = 3;
             Winner();
@@ -285,36 +276,49 @@ void Winner()
     {
         cash += bet * 2;
         bet = 0;
-        WriteLine("Player Wins");
+        WriteLine("Player Wins\n");
     }
-    else if(winner == 2)
+    else if (winner == 2)
     {
         bet = 0;
-        WriteLine("Dealer Wins");
+        WriteLine("Dealer Wins\n");
     }
-    else if(winner == 3)
+    else if (winner == 3)
     {
         cash += bet;
         bet = 0;
-        WriteLine("Push");
+        WriteLine("Push\n");
+    }
+    else if (winner == 4)
+    {
+        cash += bet * 3;
+        bet = 0;
+        WriteLine("Player Blackjack\n");
+    }
+    else if (winner == 5)
+    {
+        bet = 0;
+        WriteLine("Dealer Blackjack");
     }
 }
 
 void ContGame()
 {
-    Write("Play another hand? (Y/N): ");
+    handComplete = false;
+
+    playerHand.Clear();
+    dealerHand.Clear();
+    bet = 0;
+    decision = 0;
+    winner = 0;
+
     contGame = ReadKey();
-    if (contGame.KeyChar == 'y')
+    if (contGame.KeyChar == 'y' || contGame.KeyChar == 1)
     {
         Clear();
-        playerHand.Clear();
-        dealerHand.Clear();
-        bet = 0;
-        decision = 0;
-        winner = 0;
         handComplete = false;
     }
-    else if (contGame.KeyChar == 'n')
+    else if (contGame.KeyChar == 'n' || contGame.KeyChar == 2)
     {
         handComplete = true;
     }
@@ -326,27 +330,30 @@ void ContGame()
 
 void GameLoop()
 {
-    bet = Bet();
+    do
+    {
+        bet = Bet();
+    } while (bet <= 0);
 
     DealCards(playerHand);
     DealCards(playerHand);
     DealCards(dealerHand);
     DealCards(dealerHand);
 
-    CalculateScore(playerHand);
-    CalculateScore(dealerHand);
+    Score(playerHand);
+    Score(dealerHand);
 
     Display();
-    while(CalculateScore(playerHand) < 21 && (decision != 2 && decision != 3))
+    while (Score(playerHand) < 21 && (decision != 2 && decision != 3))
     {
         PlayerDecision();
-        if ((decision == 1) && CalculateScore(playerHand) < 21)
+        if ((decision == 1) && Score(playerHand) < 21)
         {
             PlayerDecision();
         }
     }
 
-    if(CalculateScore(playerHand) < 21)
+    if (Score(playerHand) < 21)
     {
         DealerAction();
     }
@@ -354,12 +361,16 @@ void GameLoop()
 
     handComplete = true;
 
-    ContGame();
-
     if (cash <= 0)
     {
         WriteLine("You lose!");
         ReadKey();
         handComplete = true;
+    }
+    else
+    {
+        Write("Play another hand? (Y/N) ");
+
+        ContGame();
     }
 }
